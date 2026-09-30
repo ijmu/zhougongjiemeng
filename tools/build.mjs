@@ -44,3 +44,25 @@ for (const f of readdirSync(OUT)) {
 writeFileSync(join(OUT, 'manifest.json'), JSON.stringify({ v: 1, total, cats: stats, built: new Date().toISOString().slice(0, 10) }));
 console.log(`\n合计 ${total} 条，已写入 web/data/`);
 if (skipped.length) console.log(`跳过 ${skipped.length} 个未完成文件: ${skipped.join(', ')}`);
+
+/* 版本戳自维护：index.html 对入口资源带 ?v=，任何 js/css 内容变动自动换新戳。
+   之前靠手改日期戳，改了代码忘了改戳 → 老用户最多多看 5 分钟旧代码（/js/* max-age=300）。 */
+{
+  const { createHash } = await import('node:crypto');
+  const h = createHash('sha256');
+  const JS = join(ROOT, 'web', 'js');
+  for (const f of readdirSync(JS).filter(f => f.endsWith('.js')).sort()) h.update(readFileSync(join(JS, f)));
+  h.update(readFileSync(join(ROOT, 'web', 'style.css')));
+  const stamp = h.digest('hex').slice(0, 10);
+  const idxPath = join(ROOT, 'web', 'index.html');
+  const html0 = readFileSync(idxPath, 'utf8');
+  const html = html0
+    .replace(/(js\/app\.js\?v=)[^"]+/g, '$1' + stamp)
+    .replace(/(style\.css\?v=)[^"]+/g, '$1' + stamp);
+  if (html !== html0) {
+    writeFileSync(idxPath, html);
+    console.log(`  版本戳 → ${stamp}`);
+  } else {
+    console.log(`  版本戳未变（${stamp.slice(0, 6)}…）`);
+  }
+}

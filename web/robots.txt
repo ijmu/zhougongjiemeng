@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /data/
 
-Sitemap: https://jiemeng.pages.dev/sitemap.xml
+Sitemap: https://zhougongjiemeng.pages.dev/sitemap.xml

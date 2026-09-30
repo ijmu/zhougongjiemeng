@@ -20,7 +20,7 @@ for (const f of readdirSync(join(WEB, 'data'))) {
 const html = readFileSync(join(WEB, 'index.html'), 'utf8').replace(/<script type="module"[^>]*><\/script>/, '');
 
 const dom = new JSDOM(html, {
-  url: 'https://jiemeng.pages.dev/?q=' + encodeURIComponent(q),
+  url: 'https://zhougongjiemeng.pages.dev/?q=' + encodeURIComponent(q),
   pretendToBeVisual: true,
 });
 const w = dom.window;

@@ -101,13 +101,19 @@ async function aiDream(req, env) {
 
   if (!env.AI) return json({ error: 'ai_unavailable' }, 503);
 
+  // symbols 只是提示参考：必须数组、限量 8 条、逐条清洗——
+  // 否则 string 类型会在 buildPrompt 里 .join 抛错（502），超长/注入文本会直接进提示词
+  const syms = Array.isArray(body.symbols)
+    ? body.symbols.slice(0, 8).map(s => clean(s, 24)).filter(Boolean)
+    : [];
+
   const model = env.AI_MODEL || '@cf/meta/llama-3.1-8b-instruct-fast';
   const t0 = Date.now();
   try {
     const r = await env.AI.run(model, {
       messages: [
         { role: 'system', content: '你是中文解梦顾问。严格遵守用户给出的全部硬性约束，尤其是不得预言死亡、疾病、灾祸。' },
-        { role: 'user', content: buildPrompt(dream, body.symbols) },
+        { role: 'user', content: buildPrompt(dream, syms) },
       ],
       max_tokens: 520,
       temperature: 0.6,
