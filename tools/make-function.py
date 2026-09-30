@@ -7,6 +7,7 @@
   2. 加一层 Pages Functions 的导出壳（onRequestPost/onRequestOptions，req→request）
 """
 import re
+import sys
 
 src = open('dist/worker.mjs', encoding='utf-8').read()
 lines = src.split('\n')
@@ -65,6 +66,22 @@ export async function onRequest({ request, env }) {
 """
 
 out = header + '\n\n'.join(parts) + '\n'
-# Pages Functions 的请求对象叫 request；Worker 版内部形参是 req，已通过壳层转换
+if '--check' in sys.argv:
+    """只校验 functions/api/ai-dream.js 是否与当前 dist/worker.mjs 同步（发版守卫）"""
+    try:
+        cur = open('functions/api/ai-dream.js', encoding='utf-8').read()
+    except FileNotFoundError:
+        cur = ''
+    if cur != out:
+        import difflib
+        diff = '\n'.join(list(difflib.unified_diff(
+            cur.splitlines(), out.splitlines(),
+            '已提交的 function', '应生成的 function', lineterm=''))[:30])
+        print('✗ functions/api/ai-dream.js 与 dist/worker.mjs 不同步 —— '
+              '改了 Worker 模板却没重新生成 Function\n' + diff)
+        raise SystemExit(1)
+    print('✓ Pages Function 与 Worker 产物同步')
+    raise SystemExit(0)
+
 open('functions/api/ai-dream.js', 'w', encoding='utf-8').write(out)
 print('生成 functions/api/ai-dream.js:', len(out), '字节')

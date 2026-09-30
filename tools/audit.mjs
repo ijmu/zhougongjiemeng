@@ -151,6 +151,35 @@ if (/不发送、不上传/.test(html)) {
     : '隐私文案声称「不上传」但未披露 AI 例外 —— 文案与实现不符');
 }
 
+// SEO 绝对 URL 域名一致性：自指域名必须是线上域名（曾因旧工程名残留全站指向死域名）
+{
+  const CANON = 'https://zhougongjiemeng.pages.dev';
+  const seo = {
+    'index.html': html,
+    'robots.txt': readFileSync(join(WEB, 'robots.txt'), 'utf8'),
+    'sitemap.xml': readFileSync(join(WEB, 'sitemap.xml'), 'utf8'),
+  };
+  for (const [name, text] of Object.entries(seo)) {
+    const hosts = [...text.matchAll(/https?:\/\/([a-z0-9.-]+)/gi)].map(m => m[1].toLowerCase());
+    // 只盯我们自己的托管域族（pages.dev / workers.dev），schema 命名空间等无关域名不误报
+    const strangers = [...new Set(hosts.filter(h => /pages\.dev$|workers\.dev$/.test(h) && h !== 'zhougongjiemeng.pages.dev'))];
+    okNote(strangers.length === 0,
+      strangers.length === 0
+        ? `${name} 自指域名一致（${hosts.length} 处绝对 URL）`
+        : `${name} 指向陌生托管域: ${strangers.join(', ')} —— 旧工程名/死域名残留`);
+  }
+  const refs = [
+    [/rel="canonical" href="([^"]+)"/, 'canonical'],
+    [/og:url" content="([^"]+)"/, 'og:url'],
+    [/og:image" content="([^"]+)"/, 'og:image'],
+  ];
+  for (const [re, name] of refs) {
+    const m = html.match(re);
+    okNote(!!m && m[1].startsWith(CANON),
+      m && m[1].startsWith(CANON) ? `${name} → ${m[1]}` : `${name} 缺失或域名不对（应为 ${CANON}…）`);
+  }
+}
+
 console.log(`\n错误 ${errs} · 提示 ${warns}`);
 console.log(errs ? '✗ 未通过' : '✓ 通过');
 process.exit(errs ? 1 : 0);

@@ -30,6 +30,8 @@ echo "════ 6/7 打包 ════"
 node tools/build.mjs | tail -4
 python3 tools/csp.py | tail -2
 python3 tools/build-worker.py | tail -3
+# 发版守卫：functions/api/ai-dream.js 必须与 dist/worker.mjs 同步（无管道，退出码生效）
+python3 tools/make-function.py --check
 
 echo ""
 echo "════ 7/7 Worker 行为测试 + 页面端到端 ════"

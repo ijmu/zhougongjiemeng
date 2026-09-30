@@ -28,21 +28,34 @@ function normalize(list) {
   return out;
 }
 
-/** 从 localStorage 读一次性缓存，避免每次重访都拉 12 个文件 */
+/** 从 localStorage 读一次性缓存，避免每次重访都拉 12 个文件。
+    半载缓存一律作废：n !== FILES.length 说明上次是坏网络下写进去的，
+    一旦命中用户就永远用半本梦书（网络抖一次 = 永久降级）。 */
 function readCache() {
   try {
     const raw = localStorage.getItem(KEY);
     if (!raw) return null;
     const o = JSON.parse(raw);
     if (!o || o.v !== 1 || !Array.isArray(o.e) || o.e.length < 200) return null;
+    if (o.n !== FILES.length) return null;
     return o.e;
   } catch (e) { return null; }
 }
 
 function writeCache(list) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, e: list }));
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, n: FILES.length, e: list }));
   } catch (e) { /* 配额满 / 隐私模式：忽略，不影响功能 */ }
+}
+
+async function fetchOne(name, tick) {
+  try {
+    const r = await fetch('data/' + name + '.json', { cache: 'force-cache' });
+    const j = r.ok ? await r.json() : null;
+    const list = Array.isArray(j) ? j : [];
+    tick(name);
+    return list;
+  } catch (e) { tick(name); return []; }
 }
 
 /**
@@ -57,18 +70,21 @@ export function loadAll(onProgress) {
   if (cached) { _all = cached; onProgress && onProgress(FILES.length, FILES.length, 'cache'); return Promise.resolve(_all); }
 
   let done = 0;
-  let ok = 0;
-  _loading = Promise.all(FILES.map(name =>
-    fetch('data/' + name + '.json', { cache: 'force-cache' })
-      .then(r => (r.ok ? r.json() : null))
-      .then(j => {
-        done++;
-        if (Array.isArray(j)) { ok++; if (onProgress) onProgress(done, FILES.length, name); }
-        else if (onProgress) onProgress(done, FILES.length, name);
-        return Array.isArray(j) ? j : [];
-      })
-      .catch(() => { done++; if (onProgress) onProgress(done, FILES.length, name); return []; })
-  )).then(parts => {
+  const tick = name => { done++; if (onProgress) onProgress(done, FILES.length, name); };
+
+  _loading = (async () => {
+    let parts = await Promise.all(FILES.map(n => fetchOne(n, tick)));
+
+    // 网络抖动自愈：对拉空了的文件静默重试一次（不重复推进度条）
+    let bad = FILES.filter((n, i) => !parts[i].length);
+    if (bad.length) {
+      await new Promise(r => setTimeout(r, 500));
+      const again = await Promise.all(bad.map(n => fetchOne(n, () => {})));
+      for (let i = 0; i < bad.length; i++) parts[FILES.indexOf(bad[i])] = again[i];
+      bad = FILES.filter((n, i) => !parts[i].length);
+      if (onProgress) onProgress(FILES.length, FILES.length, 'retry:' + (bad.length ? 'partial' : 'ok'));
+    }
+
     const clean = [];
     const seen = new Set();
     for (const p of parts) {
@@ -80,9 +96,13 @@ export function loadAll(onProgress) {
       }
     }
     _loading = null;
-    if (ok >= 6 && clean.length >= 200) { _all = clean; writeCache(clean); }
+    const okCount = parts.filter(p => p.length).length;
+    // 会话内 ≥6 个文件即可用（坏一点也比全空强）；
+    // 但只有 **全量** 才允许写缓存——半载绝不过夜
+    if (okCount >= 6 && clean.length >= 200) _all = clean;
+    if (okCount === FILES.length && clean.length >= 200) writeCache(clean);
     return clean;
-  });
+  })();
 
   return _loading;
 }
