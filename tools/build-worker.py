@@ -379,9 +379,10 @@ async function aiDream(req, env) {
       const ls = String(text).split('\n').map(s => s.trim()).filter(Boolean);
       const last = ls.length && /^【意象】/.test(ls[ls.length - 1]) ? ls.pop() : '';
       if (last) {
-        const ws = last.replace(/^【意象】/, '').split(/[、,，;；#/\s·．.]+/)
+        const ws = last.replace(/^【意象】/, '')
+          .split(/[^\u4e00-\u9fa5]+/)                      // 模型分隔符不可预测（、#·•…实测全出现过）——非汉字一律视为分隔
           .map(s => clean(s, 12))
-          .filter(s => s && /[\u4e00-\u9fa5]/.test(s))   // 含汉字即收——蛇/水等单字核心意象不能滤
+          .filter(s => s && /[\u4e00-\u9fa5]/.test(s))     // 含汉字即收——蛇/水等单字核心意象不能滤
           .slice(0, 4);
         text = ls.join('\n');
         evoN = ws.length;

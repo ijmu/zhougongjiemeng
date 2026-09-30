@@ -179,12 +179,12 @@ console.log('\n── AI 端点 · 进化遥测 ──');
 }
 {
   const day = new Date().toISOString().slice(0, 10);
-  const { env, store } = makeEnv('解读正文。\n【意象】机场#飞机·行李');
+  const { env, store } = makeEnv('解读正文。\n【意象】机场#飞机·行李•登机牌');
   r = await api({ consent: '1', dream: '梦见赶飞机' }, env);
   const out = await r.json();
   const bag = JSON.parse(store.get('evo:' + day) || '{}');
-  ok(out.evo === 3 && bag['机场'] === 1 && bag['飞机'] === 1 && bag['行李'] === 1,
-    `分隔符变体（# ·）→ ${JSON.stringify(bag)}`);
+  ok(out.evo === 4 && bag['机场'] === 1 && bag['飞机'] === 1 && bag['行李'] === 1 && bag['登机牌'] === 1,
+    `任意非汉字分隔（# · •）→ ${JSON.stringify(bag)}`);
 }
 {
   const day = new Date().toISOString().slice(0, 10);
