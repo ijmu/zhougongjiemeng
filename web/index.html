@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080a14">
+<meta name="format-detection" content="telephone=no">
+<title>周公解梦 · 梦境详解</title>
+<meta name="description" content="输入你梦见了什么，按传统周公解梦与心理学象征双线解读：逐象吉凶、情境分述、预兆维度。纯前端本地计算，梦境内容不上传。">
+<link rel="canonical" href="https://jiemeng.pages.dev/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="周公解梦">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:url" content="https://jiemeng.pages.dev/">
+<meta property="og:title" content="周公解梦 · 梦境详解">
+<meta property="og:description" content="说了你梦到什么，逐象拆解吉凶，传统断语与心理象征双线解读。梦境只在本机计算。">
+<meta property="og:image" content="https://jiemeng.pages.dev/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='88'>🌙</text></svg>">
+<link rel="stylesheet" href="style.css?v=20260929a">
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <div class="bg-glow"></div>
+  <div class="bg-stars" id="bgStars"></div>
+  <div class="bg-moon"></div>
+</div>
+
+<header class="top">
+  <div class="mark">🌙</div>
+  <h1>周公解梦</h1>
+  <p class="tag">梦境详解 · 逐象拆解</p>
+</header>
+
+<main>
+
+  <section class="card" id="card-input">
+    <div class="card-h"><span class="ci">壹</span><h2>说梦</h2></div>
+
+    <textarea id="dream" class="dream-in" rows="4" maxlength="300"
+      placeholder="把梦见的写下来，越具体越准。例如：梦见一条大白蛇追着我跑，我躲进了一个很旧的房子，屋里全是水。"
+      aria-label="梦境描述"></textarea>
+
+    <div class="meta-row">
+      <span id="hitpre" class="chip ghost">等待输入</span>
+      <span id="counter" class="chip ghost">0 / 300</span>
+    </div>
+
+    <div class="quick" id="quick"></div>
+
+    <p class="err" id="err"></p>
+
+    <button class="btn-main" id="go"><span>解 梦</span></button>
+
+    <div class="btn-row">
+      <button class="btn-sub" id="random">随机一梦</button>
+      <button class="btn-sub" id="clear">清空</button>
+      <button class="btn-sub" id="browse">翻梦书</button>
+    </div>
+
+    <p class="tip">梦境文本默认只在你自己的浏览器里做匹配计算，<b>不发送、不上传</b>。
+      唯一的例外是下方「让 AI 再读一遍」——<b>只有你主动勾选同意后</b>，那段梦境才会发到服务器交给 AI。
+      最近的解梦记录只存在本机，随时可用「清空」抹掉。</p>
+  </section>
+
+  <section class="cast" id="cast" hidden>
+    <div class="cast-ring"><div class="cast-orbit" id="orbit"></div><div class="cast-core">🌙</div></div>
+    <p class="cast-step" id="castStep">翻阅梦书…</p>
+  </section>
+
+  <div id="result"></div>
+
+  <section class="card" id="card-browse" hidden>
+    <div class="card-h"><span class="ci">书</span><h2>翻梦书</h2>
+      <span class="hint" id="browseCount"></span></div>
+    <input id="bq" class="dream-in sq" type="search" placeholder="搜梦象，如 蛇、掉牙、考试" aria-label="搜索梦象">
+    <div class="tabs" id="tabs"></div>
+    <div id="blist" class="blist"></div>
+  </section>
+
+  <section class="card" id="card-detail" hidden>
+    <div class="card-h"><span class="ci">象</span><h2 id="d-title">梦象</h2>
+      <button class="link-btn" id="d-close">关闭</button></div>
+    <div id="d-body"></div>
+  </section>
+
+  <section class="card" id="card-history" hidden>
+    <div class="card-h"><span class="ci">录</span><h2>本机解梦记录</h2>
+      <button class="link-btn" id="hist-clear">清空</button></div>
+    <div id="hist-list"></div>
+  </section>
+
+  <section class="card dim-card" id="card-about">
+    <div class="card-h"><span class="ci">法</span><h2>解梦依据</h2></div>
+    <div class="about">
+      <p><b>① 逐象检索</b>　把你写的梦拆成符号：主键与别名按长度降序匹配，长词优先、区间不重叠，避免「蛇」抢掉「蛇蜕皮」。</p>
+      <p><b>② 情境判定</b>　每个梦象还要看它周围说了什么。用二元组重合度在情境表里挑最贴的一条——「被蛇追咬」与「打死蛇」同是蛇，断语相反。</p>
+      <p><b>③ 双线解读</b>　每条梦象给出<b>传统断语</b>（周公解梦与民俗说法）与<b>心理象征</b>（荣格原型、弗洛伊德、认知梦境研究的常见解释）。</p>
+      <p><b>④ 合参定级</b>　各象按其具体程度与在句中的位置加权，汇成综合倾向，并统计预兆维度分布（财、事、情、健、人、心、行、学）。</p>
+      <p><b>⑤ AI 补读</b>　梦书未收录的说法，可在你<b>主动同意后</b>交给 AI 解读。这一步会把梦境文本发送到服务器；不勾选则全程不联网。</p>
+      <p class="w">吉凶倾向分五档（大吉 / 吉 / 平 / 凶 / 大凶），来自传统断语的实际分化，不是一概而论。
+        AI 解读额外做了红线约束：禁止预言死亡、疾病与灾祸。</p>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>本站内容为传统民俗解梦说法与心理学象征理论的<b>文化娱乐参考</b>，不构成任何医学、心理、投资、法律或人生决策建议。</p>
+  <p>梦是大脑整理记忆与情绪的方式，它提示状态，不预告命运——真正决定走向的是你醒着时做的事。</p>
+  <p class="cr">周公解梦 · 纯前端本地计算 · 无后端 · 无追踪</p>
+</footer>
+
+<script>
+window.__bootOK = false;
+setTimeout(function () {
+  if (window.__bootOK) return;
+  var e = document.getElementById('err');
+  if (e) { e.textContent = '脚本加载失败，请刷新重试（若仍失败请检查网络后强制刷新）。'; e.style.display = 'block'; }
+  var g = document.getElementById('go'); if (g) g.disabled = false;
+}, 8000);
+</script>
+<script type="module" src="js/app.js?v=20260929a"></script>
+</body>
+</html>

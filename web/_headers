@@ -1,0 +1,39 @@
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: no-referrer
+  X-Frame-Options: SAMEORIGIN
+  Permissions-Policy: geolocation=(), camera=(), microphone=(), payment=(), usb=()
+  Content-Security-Policy: default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self' 'sha256-fgT63hxxQTcYvxdGtPOi0+oJMPcOQ/u7kjZCtUjaPwQ='; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'self'
+
+# 注意：Pages 对同时匹配的规则是「拼接」而非「覆盖」，
+# 所以 Cache-Control 只能在一条规则里出现，否则会拼出冲突值。
+
+/
+  Cache-Control: public, max-age=0, must-revalidate
+
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/404.html
+  Cache-Control: public, max-age=0, must-revalidate
+
+/js/*
+  Cache-Control: public, max-age=300
+
+/data/*
+  Cache-Control: public, max-age=3600
+
+/style.css
+  Cache-Control: public, max-age=300
+
+/og.png
+  Cache-Control: public, max-age=86400
+
+/apple-touch-icon.png
+  Cache-Control: public, max-age=86400
+
+/sitemap.xml
+  Cache-Control: public, max-age=86400
+
+/robots.txt
+  Cache-Control: public, max-age=86400
