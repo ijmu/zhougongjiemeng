@@ -30,7 +30,7 @@ const TG_MAP = {
 let changed = 0;
 const report = { tg: 0, g: 0, nm: 0, sc: 0, files: 0 };
 
-for (const f of readdirSync(DIR).filter(x => x.endsWith('.json')).sort()) {
+for (const f of readdirSync(DIR).filter(x => x.endsWith('.json') && !f.startsWith('_')).sort()) {
   let arr;
   try { arr = JSON.parse(readFileSync(join(DIR, f), 'utf8')); }
   catch (e) { console.log(`  跳过未完成 ${f}`); continue; }

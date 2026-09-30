@@ -24,7 +24,7 @@ const quality = e =>
   (Array.isArray(e.sc) ? e.sc.length : 0) * 1000 + (e.ct || '').length + (e.ps || '').length;
 
 /* ── 1. 收集（含分片文件） ── */
-const files = readdirSync(DIR).filter(f => f.endsWith('.json') && !f.endsWith('.broken')).sort();
+const files = readdirSync(DIR).filter(f => f.endsWith('.json') && !f.startsWith('_') && !f.endsWith('.broken')).sort();
 const skipped = [];
 const shards = [];
 const groups = new Map();
