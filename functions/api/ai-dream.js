@@ -12,7 +12,15 @@ export async function onRequestOptions() {
   return new Response(null, { status: 204, headers: { Allow: 'POST, OPTIONS' } });
 }
 
-export async function onRequestPost({ request, env }) {
+/* 非 POST 一律 405（与 Worker 版一致）——
+   Pages Functions 若只导出 onRequestPost，GET 会落回静态 404，语义就错了 */
+export async function onRequest({ request, env }) {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: { Allow: 'POST, OPTIONS' } });
+  }
+  if (request.method !== 'POST') {
+    return json({ error: 'method_not_allowed' }, 405);
+  }
   return aiDream(request, env);
 }
 

@@ -294,12 +294,19 @@ function aiErrMsg(code) {
 /* 把四段式输出渲染成卡片。
    模型有时会回读段名（「梦象一个复杂的事情」），这里按行切分并剥离行首段名。 */
 function renderAiText(text, meta) {
-  let parts = String(text).split(/\n(?=\s*\*{0,2}(?:梦象|心理|民俗|建议)\*{0,2}\s*[：:]?)/)
+  const SRC = String(text);
+  let parts = SRC.split(/\n(?=\s*\*{0,2}(?:梦象|心理|民俗|建议)\*{0,2}\s*[：:]?)/)
     .map(s => s.trim()).filter(Boolean);
 
-  // 兜底：模型把四段挤成一行时，按段名切分（段名可能不带冒号，故要求其处于句首/句号后）
+  // 兜底②：模型把四段挤成一行且段名带 **（如「**梦象**：…  **心理**：…」）——
+  // 字面 **段名** 在正文里几乎不会出现，切分无歧义
   if (parts.length < 2) {
-    parts = String(text)
+    parts = SRC.split(/(?=\*\*\s*(?:梦象|心理|民俗|建议)\*\*)/).map(s => s.trim()).filter(Boolean);
+  }
+
+  // 兜底③：段名裸写且处于句首/句号后（如「…。心理从心理层面看…」）
+  if (parts.length < 2) {
+    parts = SRC
       .replace(/([。！？])\s*(?=(?:梦象|心理|民俗|建议))/g, '$1\n\n')
       .split(/\n\n+/).map(s => s.trim()).filter(Boolean);
   }
