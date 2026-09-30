@@ -224,6 +224,12 @@ export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
 
+    // ── 整站已搬迁到 Pages：老 workers.dev 地址 308 跳转（保留方法与路径，POST 不降级）──
+    // 此后本 Worker 只做跳转，不再承担内容与 API；未来发版只推 Pages 仓库即可。
+    if (url.hostname.endsWith('.workers.dev')) {
+      return Response.redirect('https://zhougongjiemeng.pages.dev' + url.pathname + url.search, 308);
+    }
+
     // ── 梦境解读外呼：仅在用户显式同意后才会被调用 ──
     // 设计约束：默认全本地；这里只接受 POST，且必须带 consent:"1"。
     // 隐私文案承诺的是「不主动上传」，因此这一点是本服务能存在的前提。
