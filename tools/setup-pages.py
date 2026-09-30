@@ -9,8 +9,11 @@
 然后用 CF API 建 Pages 项目并把 production_branch 指向它。
 
 用法:
-  python3 tools/setup-pages.py --owner ijmu --repo jiemeng
-  python3 tools/setup-pages.py --owner ijmu --repo jiemeng --deploy   # 建完后推一次提交触发构建
+  python3 tools/setup-pages.py --owner ijmu --repo zhougongjiemeng
+  python3 tools/setup-pages.py --owner ijmu --repo zhougongjiemeng --deploy   # 建完后推一次提交触发构建
+
+说明：Pages 的线上地址由 --project 决定（zhougongjiemeng → zhougongjiemeng.pages.dev），
+      与 GitHub 仓库名无关，但两者保持一致最省心。
 """
 import argparse
 import json
@@ -19,33 +22,57 @@ import urllib.error
 import urllib.request
 
 API = 'https://api.cloudflare.com/client/v4'
-PROJECT = 'jiemeng'
+PROJECT = 'zhougongjiemeng'
+
+
+def _retry(fn, tries=6, base=2.0):
+    """出口代理对 api.cloudflare.com / github.com 有 TLS 抖动，重试是必须的"""
+    import time
+    last = None
+    for i in range(tries):
+        try:
+            return fn()
+        except urllib.error.HTTPError:
+            raise                       # HTTP 状态码是真实响应，不重试
+        except Exception as e:          # SSL EOF / URLError / timeout 等
+            last = e
+            if i < tries - 1:
+                time.sleep(base * (i + 1))
+    raise last
 
 
 def gh(path):
     token = os.environ.get('GH_TOKEN')
-    req = urllib.request.Request('https://api.github.com' + path)
-    req.add_header('Authorization', 'token ' + token)
-    req.add_header('Accept', 'application/vnd.github+json')
-    req.add_header('User-Agent', 'minis-setup/1.0')
-    try:
+
+    def once():
+        req = urllib.request.Request('https://api.github.com' + path)
+        req.add_header('Authorization', 'token ' + token)
+        req.add_header('Accept', 'application/vnd.github+json')
+        req.add_header('User-Agent', 'minis-setup/1.0')
         with urllib.request.urlopen(req, timeout=60) as r:
             return json.loads(r.read().decode() or '{}')
+
+    try:
+        return _retry(once)
     except urllib.error.HTTPError as e:
         return {'__error__': e.code, 'body': e.read().decode(errors='replace')[:400]}
 
 
 def cf(path, method='GET', payload=None):
     token = os.environ['CLOUDFLARE_API_TOKEN']
-    data = json.dumps(payload).encode() if payload is not None else None
-    req = urllib.request.Request(API + path, data=data, method=method)
-    req.add_header('Authorization', 'Bearer ' + token)
-    req.add_header('User-Agent', 'minis-setup/1.0')
-    if data:
-        req.add_header('Content-Type', 'application/json')
-    try:
+
+    def once():
+        data = json.dumps(payload).encode() if payload is not None else None
+        req = urllib.request.Request(API + path, data=data, method=method)
+        req.add_header('Authorization', 'Bearer ' + token)
+        req.add_header('User-Agent', 'minis-setup/1.0')
+        if data:
+            req.add_header('Content-Type', 'application/json')
         with urllib.request.urlopen(req, timeout=120) as r:
             return json.loads(r.read().decode() or '{}')
+
+    try:
+        return _retry(once)
     except urllib.error.HTTPError as e:
         body = e.read().decode(errors='replace')
         try:
@@ -118,7 +145,10 @@ def main():
         print('✗ 失败: %s' % json.dumps(res.get('errors'), ensure_ascii=False)[:900])
         return 1
     sub = (res['result'].get('subdomain') or args.name)
-    print('   ✓ 项目就绪: https://%s.pages.dev/' % sub)
+    # CF 返回的 subdomain 已含 ".pages.dev" 后缀，别再拼一次
+    if not sub.endswith('.pages.dev'):
+        sub += '.pages.dev'
+    print('   ✓ 项目就绪: https://%s/' % sub)
     if not res['result'].get('latest_deployment'):
         print('   ! 尚无部署记录 —— 需要向 %s 推一个提交才会触发首次构建' % args.branch)
     return 0
