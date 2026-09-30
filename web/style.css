@@ -355,3 +355,59 @@ footer .cr{color:#6a6f92;letter-spacing:.1em;margin-top:12px}
 @media (min-width:700px){
   .blist{grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
 }
+
+/* ================= v2.1 细化层（追加覆盖） ================= */
+
+/* 桌面悬停态（触屏设备不生效，避免粘滞高亮） */
+@media (hover:hover){
+  .qk:hover{background:rgba(162,149,234,.2)}
+  .tab:hover{background:rgba(255,255,255,.075);color:var(--txt)}
+  .tab.on:hover{background:rgba(127,216,196,.19)}
+  .bi:hover{background:var(--line)}
+  .sug-i:hover{background:var(--line);border-color:var(--line2)}
+  .btn-sub:hover{background:rgba(255,255,255,.055);color:var(--txt)}
+  .link-btn:hover{color:var(--gold)}
+  .hist-i:hover{background:var(--line);border-color:var(--line2)}
+  .btn-main:hover:not(:disabled){filter:brightness(1.04)}
+  .ai-go:hover:not(:disabled){background:rgba(220,184,122,.2)}
+  .ai-go.ready:hover:not(:disabled){filter:brightness(1.05)}
+  .sym-more summary:hover{color:var(--dim)}
+  .more-i:hover b{color:var(--gold2)}
+}
+
+/* 星空微闪：慢呼吸，big 星更亮一档 */
+.bg-stars i{animation:twinkle 3.6s ease-in-out infinite}
+.bg-stars i.big{animation-duration:2.8s}
+.bg-stars i:nth-child(3n){animation-delay:1.2s}
+.bg-stars i:nth-child(3n+1){animation-delay:2.1s}
+.bg-stars i:nth-child(4n){animation-delay:.6s;animation-duration:4.4s}
+@keyframes twinkle{0%,100%{opacity:.45}50%{opacity:1}}
+
+/* 判定环：外圈同色柔辉光，与 vbar 的发光呼应 */
+.vring{box-shadow:0 0 28px color-mix(in srgb,var(--vc,#dcb87a) 20%,transparent)}
+
+/* 吉凶章与分类章：色底代替裸描边，小字更易读 */
+.sym-h .gk{background:color-mix(in srgb,currentColor 13%,transparent)}
+.sym-h .cat{background:rgba(255,255,255,.05)}
+
+/* AI 四段标题：与逐象卡同语言的刻线 */
+.ai-sec b{display:flex;align-items:center;gap:6px}
+.ai-sec b::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--goldd)}
+
+/* 结果组件入场：轻微浮起（renderAiText/solve 渲染时触发一次） */
+.sym,.sug-block,.verdict,.summary,.dims{animation:fadeUp .28s ease both}
+.sym:nth-child(2){animation-delay:.04s}
+.sym:nth-child(3){animation-delay:.08s}
+.sym:nth-child(n+4){animation-delay:.12s}
+
+/* 题头装饰：题记两侧小菱点 */
+.top .tag::before,.top .tag::after{content:'◆';font-size:6px;color:var(--goldd);
+  vertical-align:2px;margin:0 10px;opacity:.85}
+
+/* 输入区再进一步 */
+.dream-in::placeholder{font-size:13.5px;letter-spacing:.01em}
+.dream-in.sq::placeholder{font-size:14px}
+.meta-row .chip.ghost:last-child{margin-left:auto}
+
+/* toast 进出更顺 */
+.toast{transition:opacity .25s ease,transform .25s cubic-bezier(.2,.9,.3,1.2)}
