@@ -15,7 +15,7 @@ let errs = 0, warns = 0;
 const E = m => { errs++; console.log('  ✗ ' + m); };
 const W = m => { warns++; console.log('  ! ' + m); };
 
-const files = existsSync(DIR) ? readdirSync(DIR).filter(f => f.endsWith('.json')) : [];
+const files = existsSync(DIR) ? readdirSync(DIR).filter(f => f.endsWith('.json') && !f.startsWith('_')) : [];
 if (!files.length) { console.log('✗ data/ 下没有 JSON 文件'); process.exit(1); }
 console.log(`发现 ${files.length} 个文件\n`);
 

@@ -12,7 +12,7 @@ const OUT = join(ROOT, 'web', 'data');
 if (!existsSync(SRC)) { console.error('✗ 缺少 data/ 目录'); process.exit(1); }
 if (!existsSync(OUT)) mkdirSync(OUT, { recursive: true });
 
-const files = readdirSync(SRC).filter(f => f.endsWith('.json')).sort();
+const files = readdirSync(SRC).filter(f => f.endsWith('.json') && !f.startsWith('_')).sort();
 let total = 0;
 const stats = {};
 const skipped = [];

@@ -108,10 +108,10 @@ if (rows.length) {
     sc: [],
     tg: [],
   }));
-  writeFileSync(join(ROOT, 'data', '_evolve-candidates.json'),
+  writeFileSync(join(ROOT, '_evolve-candidates.json'),
     JSON.stringify(cands, null, 1));
-  console.log(`\n已写 data/_evolve-candidates.json —— 审阅后把条目并进对应分类文件，`);
-  console.log(`补全 ct/ps/sc 字段，然后跑 sh tools/release.sh 走正常发版。切勿整文件直接合并。`);
+  console.log(`\n已写 _evolve-candidates.json（仓库根，gitignore，不进 data/ 防止被语料管线误扫）——`);
+  console.log(`审阅后把条目并进对应分类文件，补全 ct/ps/sc 字段，然后跑 sh tools/release.sh 走正常发版。切勿整文件直接合并。`);
 } else {
   console.log('暂无达标候选 —— 闭环安静运行中。');
 }

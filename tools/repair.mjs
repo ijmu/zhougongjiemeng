@@ -41,7 +41,7 @@ function scanObjects(s) {
 const REQUIRED = ['k', 'c', 'ct', 'ps'];
 
 let fixed = 0;
-const files = existsSync(DIR) ? readdirSync(DIR).filter(f => f.endsWith('.json')).sort() : [];
+const files = existsSync(DIR) ? readdirSync(DIR).filter(f => f.endsWith('.json') && !f.startsWith('_')).sort() : [];
 if (!files.length) { console.log('data/ 下没有 JSON'); process.exit(1); }
 
 for (const f of files) {
