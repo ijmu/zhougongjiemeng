@@ -67,6 +67,7 @@ function buildPrompt(dream, symbols) {
     '心理：从心理层面看，做梦人近期可能处在什么状态',
     '民俗：传统解梦怎么讲，客观转述，不带恐吓',
     '建议：一两句可落地的自我觉察方向，不做决策指导',
+    '最后单独一行输出【意象】加 2–4 个核心意象词（顿号分隔），便于归档，不要任何解释',
     '',
     sym,
     '【用户的梦境】',
@@ -118,12 +119,36 @@ async function aiDream(req, env) {
       max_tokens: 520,
       temperature: 0.6,
     });
-    const text = (r && (r.response || r.result)) || '';
+    let text = (r && (r.response || r.result)) || '';
     if (!text) return json({ error: 'empty_response' }, 502);
+
+    // 提取末行【意象】：只把意象词做匿名计数（梦境原文绝不落盘），并从返回文本剥离。
+    // 这是语料进化的数据源：未被梦书收录的说法经 AI 点名后，高频意象自动浮出为增补候选。
+    let evoN = 0;
+    {
+      const ls = String(text).split('\n').map(s => s.trim()).filter(Boolean);
+      const last = ls.length && /^【意象】/.test(ls[ls.length - 1]) ? ls.pop() : '';
+      if (last) {
+        const ws = last.replace(/^【意象】/, '').split(/[、,，;；\s]+/)
+          .map(s => clean(s, 12))
+          .filter(s => s && /[\u4e00-\u9fa5]/.test(s))   // 含汉字即收——蛇/水等单字核心意象不能滤
+          .slice(0, 4);
+        text = ls.join('\n');
+        evoN = ws.length;
+        if (env.RL && evoN) {
+          try {
+            const dk = 'evo:' + day;
+            const bag = JSON.parse((await env.RL.get(dk)) || '{}');
+            for (const w of ws) bag[w] = (bag[w] || 0) + 1;
+            await env.RL.put(dk, JSON.stringify(bag), { expirationTtl: 7776000 });
+          } catch (e) { /* 遥测失败不阻断解读 */ }
+        }
+      }
+    }
 
     // 输出侧兜底：命中死亡/疾病类词汇则改写为心理表述（防止提示词被绕过）
     const safe = soften(text);
-    return json({ ok: true, text: safe, model: model, ms: Date.now() - t0, softened: safe !== text });
+    return json({ ok: true, text: safe, model: model, ms: Date.now() - t0, softened: safe !== text, evo: evoN });
   } catch (e) {
     return json({ error: 'ai_failed', detail: String(e.message || e).slice(0, 200) }, 502);
   }

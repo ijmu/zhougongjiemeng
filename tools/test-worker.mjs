@@ -84,18 +84,19 @@ for (const p of ['/js/engine.js', '/js/app.js', '/js/data.js', '/style.css', '/4
 }
 
 /* ── AI 端点（mock env：不消耗真实配额，覆盖守门/硬化/限流/红线） ── */
-function makeEnv() {
+function makeEnv(text) {
   const store = new Map();
   const calls = [];
   return {
     env: {
-      AI: { run: async (model, opts) => { calls.push({ model, opts }); return { response: MOCK_AI_TEXT }; } },
+      AI: { run: async (model, opts) => { calls.push({ model, opts }); return { response: text == null ? MOCK_AI_TEXT : text }; } },
       RL: {
         get: async k => store.get(k) || 0,
         put: async (k, v) => { store.set(k, v); },
       },
     },
     calls,
+    store,
   };
 }
 const MOCK_AI_TEXT = '**梦象**：蛇  **心理**：焦虑。预示亲人离世。';
@@ -160,6 +161,37 @@ console.log('\n── AI 端点 · 限流与红线 ──');
   ok(!out.text.includes('离世'), '输出已无「离世」');
   ok(out.text.includes('挂念'), '改写为心理表述');
   ok(calls[0].opts.messages[0].content.includes('不得预言死亡'), 'system 提示词带红线约束');
+}
+
+console.log('\n── AI 端点 · 进化遥测 ──');
+{
+  const day = new Date().toISOString().slice(0, 10);
+  const { env, store, calls } = makeEnv('**梦象**：蛇  **心理**：焦虑。**民俗**：主财。**建议**：记录情绪。\n【意象】蛇、旧屋、水、x');
+  r = await api({ consent: '1', dream: '梦见蛇缠身' }, env);
+  const out = await r.json();
+  ok(r.status === 200 && out.evo === 3, `意象提取 → evo=${out.evo}（非汉字 x 被滤）`);
+  ok(!out.text.includes('【意象】'), '返回文本已剥离【意象】行');
+  const bag = JSON.parse(store.get('evo:' + day) || '{}');
+  ok(bag['蛇'] === 1 && bag['旧屋'] === 1 && bag['水'] === 1, `KV 计数落盘 ${JSON.stringify(bag)}`);
+  ok([...store.entries()].every(([k, v]) => !String(v).includes('缠身') && !String(v).includes('追')),
+    'KV 任何键值都不含梦境原文（隐私性质）');
+  ok(calls[0].opts.messages[1].content.includes('【意象】'), '提示词带意象归档指令');
+}
+{
+  const day = new Date().toISOString().slice(0, 10);
+  const { env, store } = makeEnv('**梦象**：蛇。**心理**：焦虑。**民俗**：主财。**建议**：观察。');
+  r = await api({ consent: '1', dream: '梦见蛇缠身' }, env);
+  const out = await r.json();
+  ok(r.status === 200 && out.evo === 0, `模型漏发意象行 → evo=${out.evo} 不崩`);
+  ok(!store.has('evo:' + day), '无意象则不写键');
+}
+{
+  const day = new Date().toISOString().slice(0, 10);
+  const { env, store } = makeEnv('解读正文。\n【意象】蛇');
+  await api({ consent: '1', dream: '梦见蛇缠身' }, env);
+  await api({ consent: '1', dream: '梦见蛇缠身' }, env);
+  const bag = JSON.parse(store.get('evo:' + day) || '{}');
+  ok(bag['蛇'] === 2, `同日累计 bag=${JSON.stringify(bag)}`);
 }
 
 console.log(`\n${fail ? '✗ 失败 ' + fail + ' 项' : '✓ 全部通过'}`);

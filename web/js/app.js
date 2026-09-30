@@ -634,3 +634,31 @@ function deepLink() {
 
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
 else boot();
+
+/* ---------- 自动更新：长开标签页回前台时自检版本，发现新版弹 toast 一键刷新 ----------
+   版本戳取自自身 <script src="app.js?v=…">，与 build.mjs 写入的 /version.json 比对。
+   HTML 本身 no-cache 每次进页都是新的，真正陈旧的只有长开的标签页——这里补上这一环。 */
+(function () {
+  const sm = document.querySelector('script[src*="app.js?v="]');
+  const V = sm ? (sm.src.match(/v=([a-z0-9]+)/) || [])[1] : '';
+  if (!V) return;
+  let last = 0;
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || Date.now() - last < 5 * 60 * 1000) return;
+    last = Date.now();
+    fetch('/version.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(r => (r.ok ? r.json() : null))
+      .then(j => {
+        if (!j || !j.v || j.v === V) return;
+        if (document.querySelector('.toast.upd')) return;
+        const t = document.createElement('div');
+        t.className = 'toast on upd';
+        t.textContent = '梦书已更新，点此刷新';
+        t.style.cursor = 'pointer';
+        t.onclick = () => location.reload();
+        document.body.appendChild(t);
+        setTimeout(() => t.remove(), 15000);
+      })
+      .catch(() => {});
+  });
+})();

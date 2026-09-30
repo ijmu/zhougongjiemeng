@@ -65,4 +65,7 @@ if (skipped.length) console.log(`跳过 ${skipped.length} 个未完成文件: ${
   } else {
     console.log(`  版本戳未变（${stamp.slice(0, 6)}…）`);
   }
+  // version.json · 供长开标签页做更新自检（与 index.html 的 ?v= 同源同值）
+  writeFileSync(join(ROOT, 'web', 'version.json'),
+    JSON.stringify({ v: stamp, built: new Date().toISOString().slice(0, 10) }));
 }

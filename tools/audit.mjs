@@ -150,6 +150,13 @@ if (/不发送、不上传/.test(html)) {
     ? '隐私文案已披露 AI 例外（与实现一致）'
     : '隐私文案声称「不上传」但未披露 AI 例外 —— 文案与实现不符');
 }
+// 意象遥测必须披露（进化闭环的隐私契约）
+if (/\/api\/ai-dream/.test(app)) {
+  const evoDisclosed = /匿名/.test(html) && /意象/.test(html) && /原文不留存/.test(html);
+  okNote(evoDisclosed, evoDisclosed
+    ? 'AI 意象词遥测已在文案披露（匿名 / 不留原文）'
+    : 'AI 意象遥测未在文案披露 —— 隐私契约缺失');
+}
 
 // SEO 绝对 URL 域名一致性：自指域名必须是线上域名（曾因旧工程名残留全站指向死域名）
 {
