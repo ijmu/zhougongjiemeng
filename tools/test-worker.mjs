@@ -179,6 +179,15 @@ console.log('\n── AI 端点 · 进化遥测 ──');
 }
 {
   const day = new Date().toISOString().slice(0, 10);
+  const { env, store } = makeEnv('解读正文。\n【意象】机场#飞机·行李');
+  r = await api({ consent: '1', dream: '梦见赶飞机' }, env);
+  const out = await r.json();
+  const bag = JSON.parse(store.get('evo:' + day) || '{}');
+  ok(out.evo === 3 && bag['机场'] === 1 && bag['飞机'] === 1 && bag['行李'] === 1,
+    `分隔符变体（# ·）→ ${JSON.stringify(bag)}`);
+}
+{
+  const day = new Date().toISOString().slice(0, 10);
   const { env, store } = makeEnv('**梦象**：蛇。**心理**：焦虑。**民俗**：主财。**建议**：观察。');
   r = await api({ consent: '1', dream: '梦见蛇缠身' }, env);
   const out = await r.json();

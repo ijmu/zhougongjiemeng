@@ -129,7 +129,7 @@ async function aiDream(req, env) {
       const ls = String(text).split('\n').map(s => s.trim()).filter(Boolean);
       const last = ls.length && /^【意象】/.test(ls[ls.length - 1]) ? ls.pop() : '';
       if (last) {
-        const ws = last.replace(/^【意象】/, '').split(/[、,，;；\s]+/)
+        const ws = last.replace(/^【意象】/, '').split(/[、,，;；#/\s·．.]+/)
           .map(s => clean(s, 12))
           .filter(s => s && /[\u4e00-\u9fa5]/.test(s))   // 含汉字即收——蛇/水等单字核心意象不能滤
           .slice(0, 4);

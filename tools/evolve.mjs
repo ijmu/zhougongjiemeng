@@ -58,14 +58,24 @@ const inRange = name => {
   return dt >= 0 && dt <= DAYS;
 };
 
-/* ② 逐键取值，聚合计数 */
+/* ② 逐键取值，聚合计数（values 端点返回原始内容而非 JSON 信封） */
 const bag = {};
 let days = 0;
 for (const name of keys.filter(inRange).sort()) {
-  const v = await cf(`/accounts/${acct}/storage/kv/namespaces/${KV_DEFAULT}/values/${encodeURIComponent(name)}`);
-  if (!v.success) continue;
-  days++;
-  for (const [w, n] of Object.entries(v.result || {})) bag[w] = (bag[w] || 0) + Number(n) || 0;
+  for (let i = 0; i < 4; i++) {
+    try {
+      const r = await fetch(`https://api.cloudflare.com/client/v4/accounts/${acct}/storage/kv/namespaces/${KV_DEFAULT}/values/${encodeURIComponent(name)}`,
+        { headers: { Authorization: 'Bearer ' + TOKEN } });
+      if (!r.ok) break;
+      const raw = await r.text();
+      let obj;
+      try { obj = JSON.parse(raw); } catch (e) { break; }
+      if (!obj || typeof obj !== 'object' || Array.isArray(obj)) break;
+      days++;
+      for (const [w, n] of Object.entries(obj)) bag[w] = (bag[w] || 0) + Number(n) || 0;
+      break;
+    } catch (e) { await new Promise(s => setTimeout(s, 1500 * (i + 1))); }
+  }
 }
 
 /* ③ 与现有梦书差集：k 或别名已含的不再候选 */
