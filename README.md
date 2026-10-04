@@ -3,9 +3,9 @@
 纯前端静态站：输入梦境描述，按**传统周公解梦**与**心理学象征**双线逐象拆解，给出吉凶定级与预兆维度分布。
 零后端、零外部请求、梦境内容只在本机浏览器计算。
 
-- 线上：https://jiemeng.5202013.workers.dev/
-- 语料：1044 个梦象符号 / 6900+ 别名 / 6000+ 情境分述
-- 部署：Cloudflare Workers（单文件打包，资源内联）
+- 线上：https://zhougongjiemeng.pages.dev/ （旧地址 jiemeng.5202013.workers.dev 为 308 跳转）
+- 语料：1045 个梦象符号 / 6900+ 别名 / 6000+ 情境分述
+- 部署：Cloudflare Pages（git 集成，push 即构建）+ Pages Functions 承载 AI 端点
 
 ---
 
@@ -14,8 +14,9 @@
 ```
 data/          语料源（12 个分类，每类一个 JSON）
 tools/         构建与验证工具链
-web/           部署目录（index.html / style.css / js/ / data/ / 静态资源）
-dist/          Worker 打包产物（不入库）
+web/           部署目录（index.html / style.css / js/ / data/ / version.json / 静态资源）
+functions/     Pages Functions（api/ai-dream.js，由 make-function.py 从 Worker 模板生成）
+dist/          Worker 打包产物（不入库；现职责仅为旧域 308 跳转）
 ```
 
 ### 运行链路
@@ -46,10 +47,13 @@ dist/          Worker 打包产物（不入库）
 | `tools/build.mjs` | 语料同步到 `web/data/` + 生成 manifest |
 | `tools/csp.py` | 计算内联脚本 sha256 并写入 `_headers` 的 CSP |
 | `tools/build-worker.py` | 打包成单文件 Worker，`--deploy` 时上传 |
-| `tools/test-worker.mjs` | Worker 行为测试：路由、MIME、缓存头、安全头、308、404、逐字节比对 |
+| `tools/test-worker.mjs` | Worker 行为测试：路由、MIME、缓存头、安全头、308、404、逐字节比对、AI 端点（mock env） |
 | `tools/e2e.mjs` | 真实页面端到端测试（jsdom）：启动→解梦→翻梦书→历史→深链→注入防御 |
 | `tools/bundle-classic.mjs` | 把 ES module 合成经典脚本，供 jsdom 注入（仅测试用） |
 | `tools/release.sh` | 一键发版：校验 → 合并 → 自测 → 回归 → 审计 → 打包 → 测试 → 上传 |
+| `tools/setup-pages.py` | 创建/更新 Pages 项目（git 集成），带出口抖动重试 |
+| `tools/make-function.py` | 从 `dist/worker.mjs` 逐字节提取生成 Pages Function；`--check` 校验同步（漂移即发版失败） |
+| `tools/evolve.mjs` | 语料进化聚合：拉取意象遥测 → 与梦书差集 → 产出待审候选 |
 
 ```sh
 sh tools/release.sh            # 全流程 + 上传
@@ -79,14 +83,26 @@ sh tools/release.sh --no-deploy  # 只到本地打包
 
 ## 部署
 
-本账户 **Cloudflare Pages Direct Upload 通道不可用**（最小项目实测同样 500），故走 Workers：
+主部署走 **Cloudflare Pages git 集成**（本账户 Direct Upload 通道不可用，实测 500）：
 
 ```sh
-python3 tools/build-worker.py --deploy
+git push origin main          # Pages 自动构建（产物目录 web/，函数目录 functions/）
+python3 tools/setup-pages.py --owner ijmu --repo zhougongjiemeng   # 仅首次建项目
 ```
 
-单文件 Worker 自己实现静态站全套行为：MIME / Cache-Control / 安全头 / CSP / 308 规范 URL / 自定义 404。
+线上地址由 **Pages 工程名**决定（`zhougongjiemeng` → `zhougongjiemeng.pages.dev`），与仓库名无关。
+AI/KV 绑定配在 Pages 项目的 `deployment_configs`（`ai_bindings.AI` + `kv_namespaces.RL`）。
+
+旧 Workers 地址仅作 **308 整站跳转**（保路径/查询/方法），不再承载内容与 API——
+避免留下不更新的陷阱地址。单文件 Worker 打包行为（MIME/安全头/CSP/308/404）保留在
+`tools/build-worker.py` 供测试与跳转 Worker 使用。
 CSP 的 `script-src` 用**内联脚本 sha256** 而非 `unsafe-inline`；改 `index.html` 内联脚本后必须重跑 `tools/csp.py`。
+
+### 发版守卫（release.sh 内置）
+
+- `make-function.py --check`：`functions/api/ai-dream.js` 与 `dist/worker.mjs` 逐字节同步，漂移即中止
+- audit.mjs：隐私契约断言（AI 例外披露、意象遥测披露）+ SEO 自指域名一致性
+- build.mjs 自动维护 `index.html` 的 `?v=` 内容哈希戳（改码忘改戳是不可能的了）
 
 ---
 
@@ -116,7 +132,7 @@ CSP 的 `script-src` 用**内联脚本 sha256** 而非 `unsafe-inline`；改 `in
 关键点：**AI 绑定走账号自身的 Workers AI 配额，不依赖 CI token 的 AI 权限**
 （实测 token 直调 `/ai/run` 返回 `401 Authentication error`，但绑定完全可用）。
 
-默认模型 `@cf/meta/llama-3.1b-instruct-fast`（实测约 1.2s）。可选
+默认模型 `@cf/meta/llama-3.1-8b-instruct-fast`（实测约 1.4s）。可选
 `@cf/meta/llama-3.3-70b-instruct-fp8-fast`（质量更好，约 1.8s）。
 注意 `@cf/google/gemma-3-12b-it` 本账号无权访问；旧的 `instruct` 系列已于 2026-05-30 弃用。
 
@@ -130,13 +146,35 @@ CSP 的 `script-src` 用**内联脚本 sha256** 而非 `unsafe-inline`；改 `in
 
 ### 限流
 
-免费配额必须设闸门。KV 按 `IP·天` 计数，**每日 8 次**，超限 429。
+免费配额必须设闸门。KV 按 `IP·天` 计数（键 `ai:YYYY-MM-DD:<ip>`），**每日 8 次**，超限 429。
 无 KV 绑定时退化为不限流（仍受 Workers AI 总配额约束）。
 
-```sh
-JIEMENG_RL_KV=<namespace_id> python3 tools/build-worker.py --deploy
-# 或写入 .deploy-ids（脚本会自动读取）
+### 意象遥测（进化闭环的数据源）
+
+提示词要求模型在解读末行输出 `【意象】词、词、词`。Function 提取后：
+
+- **只把意象词匿名计数**进 KV（键 `evo:YYYY-MM-DD`，90 天 TTL），梦境原文绝不落盘
+  （切分规则：任意非汉字字符都是分隔——实测模型用过 `、` `#` `·` `•`，甚至不打分隔符）
+- 返回给用户前剥离该行，用户无感
+- 文案同步披露「核心意象词会被匿名计数、原文不留存」，audit 有契约断言
+
+## 自动进化闭环
+
 ```
+未命中 → 用户同意 AI 补读 → 【意象】提取 → KV 匿名计数（自动，运行时）
+       → node tools/evolve.mjs [--min N] [--days D]   聚合 + 与梦书差集
+       → _evolve-candidates.json（仓库根，gitignore）  待审候选
+       → 人工审阅补全 ct/ps/sc → 并入对应 data/*.json → 正常发版
+```
+
+**候选绝不自动并入**——AI 幻觉污染梦书的代价远大于人审成本，闭环自动化到「浮出水面」为止。
+注意：候选文件绝不放进 `data/`（五个工具 glob 该目录，会被当语料发货）。
+
+## 客户端自更新
+
+`build.mjs` 每次构建产出 `web/version.json`（与 index.html 的 `?v=` 同源同值）。
+长开的旧标签页回前台时（5 分钟节流）比对自身 `<script src>` 的戳与服务端版本，
+不一致则弹 toast 一键刷新——补上「HTML 每次都新、JS 只在加载时固定」的最后一环。
 
 ---
 
