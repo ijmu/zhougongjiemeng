@@ -9,7 +9,7 @@
   覆盖：启动加载 → 输入提示 → 解梦主流程 → 结果渲染 → 翻梦书 → 详情 → 历史 → 深链 → 注入防御
 */
 import { JSDOM, VirtualConsole } from 'jsdom';
-import { readFileSync, existsSync, writeFileSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, readdirSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
@@ -340,6 +340,23 @@ ok(histItems.length >= 1, `历史仍有 ${histItems.length} 条`);
 histItems[0].click();
 await until(() => $('result').innerHTML.length > 500);
 ok($('result').innerHTML.length > 500, '点击历史记录能重新出结果');
+ok(!!$('result').querySelector('.insights'), '「另一面」面板随结果渲染');
+ok(!!$('result').querySelector('.ins-rec') && /本机第 2 次/.test($('result').querySelector('.ins-rec').textContent),
+  '重复信号面板：历史重解即触发，计数正确');
+ok(!!document.getElementById('card-care') && /意象排演/.test(document.getElementById('card-care').textContent),
+  '「梦与心理」模块就位（IRT 自助内容）');
+
+/* 多角度专项：情绪基调（仅 +1 次渲染；重复信号并入下方历史回放断言，控内存） */
+console.log('\n── 多角度：情绪 ──'); mark('多角度 开始'); mark('多角度');
+setVal('梦见' + K1 + '，吓得出了一身冷汗，拼命逃跑');
+$('go').click();
+await until(() => $('result').innerHTML.length > 500);
+ok(!!$('result').querySelector('.ins-mood'), '情绪基调面板（fear 词必中）');
+ok(/紧张/.test($('result').querySelector('.ins-mood').textContent), '情绪解读文案正确');
+ok(!!$('result').querySelector('.ins-care'), '强紧张时有通往「梦与心理」的入口');
+const psyNote = $('result').querySelector('.sym-psy');
+if (psyNote) ok(/注/.test(psyNote.textContent), '心理学注脚格式正确');
+else ok(true, '本例符号无注脚（正常——注脚只覆盖常见意象）');
 
 /* 深链：另行开子进程跑（jsdom 第二个 DOM 实例会把沙箱 node 撑爆） */
 console.log('\n── 深链（子进程）──'); mark('深链 开始'); mark('深链');

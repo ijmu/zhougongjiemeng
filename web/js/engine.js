@@ -30,6 +30,36 @@ export function textSentiment(s) {
   return d > 0 ? 1 : d < 0 ? -1 : 0;
 }
 
+/* ---------- 梦者情绪基调（区别于上面的断语倾向） ----------
+   textSentiment 算的是「断语的吉凶倾向」，这里算的是「梦者描述梦境时用的情绪词」。
+   现代梦研究的共识：梦的情绪往往比意象内容更可靠。词表是梦者的口语，粗略基调，仅供自我觉察。 */
+const MOOD_LEX = {
+  fear: ['怕', '吓', '恐', '惊', '追', '逃', '躲', '坠', '掉下', '困住', '喊不出', '叫不', '僵', '慌', '急醒', '鬼', '怪物', '袭击', '危险', '喘', '窒息', '噩梦', '醒不来', '追杀', '冷汗', '心悸'],
+  sad: ['哭', '泪', '悲', '难过', '丢', '失去', '找不', '离别', '离开', '想念', '思念', '孤独', '逝', '告别', '空落', '遗憾'],
+  anger: ['吵', '骂', '打架', '吵架', '争执', '恨', '怒', '气死', '冲突', '摔', '憋'],
+  calm: ['笑', '开心', '高兴', '美', '晴', '飞', '甜', '舒服', '轻松', '温暖', '自由', '香', '稳', '亮堂', '治愈'],
+};
+const MOOD_META = {
+  fear: { label: '紧张 · 惊惧', note: '紧张类情绪占主导——现代梦研究更倾向把它看作近期压力或未消化事件的延续，而不是预兆。' },
+  sad: { label: '悲伤 · 失落', note: '失落感主导——常与具体的失去、告别或怀念有关，允许自己为此停一停。' },
+  anger: { label: '愤怒 · 冲突', note: '冲突感主导——可能有一些没说出口的不满，找个安全的出口比压着更有效。' },
+  calm: { label: '平静 · 愉悦', note: '平静愉悦主导——多是状态的映照，没有需要对抗的东西，安心睡。' },
+};
+
+export function moodTone(s) {
+  const t = String(s || '');
+  if (!t) return null;
+  let best = null, bestN = 0, bestWs = null;
+  for (const k in MOOD_LEX) {
+    const ws = MOOD_LEX[k].filter(w => t.includes(w));
+    if (ws.length && ws.length > bestN) { best = k; bestN = ws.length; bestWs = ws; }
+  }
+  if (!best) return null;
+  const m = MOOD_META[best];
+  return { tone: best, label: m.label, note: m.note, n: bestN,
+    words: bestWs.slice(0, 4), lvl: bestN >= 5 ? 3 : bestN >= 3 ? 2 : 1 };
+}
+
 /* ---------- 索引 ---------- */
 
 /**

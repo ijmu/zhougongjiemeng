@@ -411,3 +411,46 @@ footer .cr{color:#6a6f92;letter-spacing:.1em;margin-top:12px}
 
 /* toast 进出更顺 */
 .toast{transition:opacity .25s ease,transform .25s cubic-bezier(.2,.9,.3,1.2)}
+
+/* ================= 心理层：另一面 + 注脚 + 梦与心理（v3 追加） ================= */
+
+/* 另一面：情绪基调 + 重复信号 */
+.insights{margin:16px 0 4px;border:1px solid var(--line);border-radius:var(--rs);
+  background:var(--card3);padding:14px 14px 4px;animation:fadeUp .3s ease}
+.ins-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;
+  padding-bottom:10px;border-bottom:1px solid var(--line);margin-bottom:11px}
+.ins-h b{font-family:var(--ffs);font-size:14px;letter-spacing:.14em;color:var(--gold2)}
+.ins-h .hint{font-size:11px;color:var(--dim2)}
+.ins-mood{margin:0 0 12px}
+.ins-mood b{display:inline-block;font-size:13.5px;color:var(--txt);margin-right:8px}
+.ins-lvl{color:var(--gold);font-size:10px;letter-spacing:3px;vertical-align:1px}
+.ins-mood p{margin:7px 0 0;font-size:13px;line-height:1.8;color:var(--dim)}
+.ins-w{color:var(--dim2)!important;font-size:12px!important}
+.ins-w b{color:var(--dim2)}
+.ins-rec{margin:0 0 12px;padding-top:11px;border-top:1px dashed var(--line)}
+.ins-rec b{font-size:13.5px;color:var(--txt)}
+.ins-rec ul{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ins-rec li{display:flex;align-items:baseline;gap:9px;font-size:13px;color:var(--dim)}
+.ins-rec li b{color:var(--jade2);font-family:var(--ffs);letter-spacing:.04em}
+.ins-rec li span{color:var(--dim2);font-size:12px;font-variant-numeric:tabular-nums}
+.ins-rec>p{margin:8px 0 0;font-size:12px;line-height:1.7;color:var(--dim2)}
+.ins-care{display:inline-block;margin:2px 0 12px;font-size:12.5px;color:var(--gold2);
+  text-decoration:none;border-bottom:1px dashed var(--goldd);padding-bottom:2px}
+
+/* 逐象卡 · 心理学注脚 */
+.sym-psy{margin:9px 0 0;padding:8px 10px;font-size:12px;line-height:1.75;color:var(--dim2);
+  background:rgba(162,149,234,.07);border-left:2px solid rgba(162,149,234,.45);border-radius:0 7px 7px 0}
+.sym-psy b{color:var(--violet2);font-family:var(--ffs);margin-right:7px;letter-spacing:.1em}
+
+/* 梦与心理（治愈模块 v1） */
+.care{padding-top:2px}
+.care h3{margin:14px 0 6px;font-family:var(--ffs);font-size:13.5px;letter-spacing:.06em;
+  color:var(--gold2);display:flex;align-items:center;gap:7px}
+.care h3::before{content:'';width:3px;height:11px;border-radius:2px;background:var(--gold)}
+.care p{margin:0 0 9px;font-size:13px;line-height:1.85;color:var(--dim)}
+.care p b{color:var(--txt);font-weight:600}
+.care ol{margin:4px 0 10px;padding-left:20px;color:var(--dim)}
+.care ol li{font-size:13px;line-height:1.9;margin-bottom:4px}
+.care ol li b{color:var(--txt)}
+.care p.w{padding:9px 11px;border-radius:8px;background:rgba(255,255,255,.03);
+  font-size:12px;color:var(--dim2)}

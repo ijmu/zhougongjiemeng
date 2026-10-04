@@ -1,7 +1,7 @@
 /* app.js · 周公解梦 · 界面与交互 */
 import { loadAll, fileNames } from './data.js';
 import {
-  buildIndex, interpret, searchEntries, suggestEntries,
+  buildIndex, interpret, searchEntries, suggestEntries, matchText, moodTone,
   CAT_LABEL, DIM_KEYS, GRADE_META, G_LABEL,
 } from './engine.js';
 
@@ -110,6 +110,91 @@ const RING_COLOR = {
   S: '#4fd39b', A: '#8fd8b0', B: '#d9b877', C: '#d9b877', D: '#e88b6a', E: '#ec6f6f', none: '#7d84a4',
 };
 
+/* ---------- 另一面：情绪基调 + 重复信号（全部本机计算，不新增任何上传） ----------
+   情绪基调来自梦者的用词（现代梦研究：情绪常比意象更可靠）；
+   重复信号来自本机解梦记录的符号交叉比对（重复梦临床上指向持续议题）。 */
+function insightsHtml(r) {
+  // 防御性包裹：新面板任何异常都不允许波及主结果页（最坏情况=少一块，而不是全白）
+  try { return insightsHtmlInner(r); } catch (e) { return ''; }
+}
+
+function insightsHtmlInner(r) {
+  const m = moodTone(r.text);
+  const RECENT = 45 * 86400000;
+  const tally = new Map();
+  for (const h of readHist()) {
+    if (!h.t) continue;                            // pushHist 在渲染之后执行，本次必然不在历史里
+    for (const hit of matchText(h.t, INDEX)) {
+      // hit.main 是「是否主键」的布尔，不是符号名；符号名要从条目表取
+      const k = (ENTRIES[hit.i] || {}).k;
+      if (!k) continue;
+      const o = tally.get(k) || { n: 0, recent: 0 };
+      o.n++;
+      if (Date.now() - (h.ts || 0) <= RECENT) o.recent++;
+      tally.set(k, o);
+    }
+  }
+  const recs = r.items.map(it => it.entry.k)
+    .map(k => ({ k, ...(tally.get(k) || { n: 0, recent: 0 }) }))
+    .filter(o => o.n >= 1)
+    .sort((a, b) => b.n - a.n || b.recent - a.recent)
+    .slice(0, 3);
+
+  if (!m && !recs.length) return '';
+  let h = '<div class="insights"><div class="ins-h"><b>另一面</b>' +
+    '<span class="hint">基于你的用词与本机记录 · 全程不联网</span></div>';
+  if (m) {
+    h += `<div class="ins-mood"><b>${esc(m.label)}</b>` +
+      `<span class="ins-lvl" aria-hidden="true">${'●'.repeat(m.lvl)}${'○'.repeat(3 - m.lvl)}</span>` +
+      `<p>${esc(m.note)}</p>` +
+      `<p class="ins-w">来自你的用词：${m.words.map(esc).join('、')}</p></div>`;
+  }
+  if (recs.length) {
+    h += '<div class="ins-rec"><b>重复信号</b><ul>' + recs.map(o =>
+      `<li><b>${esc(o.k)}</b><span>本机第 ${o.n + 1} 次` +
+      (o.recent ? ` · 近 45 天 ${o.recent + 1} 次` : '') + '</span></li>').join('') +
+      `</ul><p>重复出现的意象通常指向持续在心的事，比单次吉凶更值得留意。</p></div>`;
+  }
+  if (m && m.tone === 'fear' && m.lvl >= 2) {
+    h += '<a class="ins-care" href="#card-care">被噩梦困扰？看「梦与心理」 ↓</a>';
+  }
+  return h + '</div>';
+}
+
+/* ---------- 心理学注脚：常见意象的命名理论框架（一种解释，不是定论） ---------- */
+const PSY_NOTES = {
+  '蛇': '荣格把蛇视为本能与转化的双重原型；威胁模拟理论（Revonsuo）则把蛇列为人类梦境中最典型的演化威胁源。',
+  '牙齿': '解释分歧最大的意象之一：弗洛伊德派联系欲望与攻击，现代临床更多见到形象焦虑与失控感的投射。',
+  '掉牙': '常与「失去掌控」有关——健康、外貌、关系或某件正在松动的事；民俗说法差异大，不必对号入座。',
+  '水': '水是跨文化最常见的情绪隐喻：清则安，浊则扰；大面积的水（海、洪水）常对应情绪容量被占满。',
+  '洪水': '情绪过载的经典意象——多件事同时涌来、超出当前消化能力，而不是「要出事」。',
+  '飞': '自主感与摆脱束缚的体验；也有研究联系 REM 期肌张力消失带来的轻浮体感假说。',
+  '被追': '威胁模拟理论（Revonsuo, 2000）认为梦在演化层面演练逃脱；临床常对应你正在回避的某个议题。',
+  '考试': '评价焦虑的残留演练——社会评判情境（面试、汇报、被比较）在睡眠中的重放，与实际考试无关也常见。',
+  '迟到': '对「来不及」的泛化焦虑：时间、承诺或某个正在关闭的机会窗口。',
+  '迷路': '目标模糊期的典型意象——选项很多但没有一条确定的路。',
+  '死亡': '荣格传统把梦中死亡读作「某阶段的结束与转化」，而非字面预言；频繁出现则更值得留意情绪负荷。',
+  '怀孕': '新计划、新身份在酝酿的隐喻——「有什么正在你身体里长大」。',
+  '房子': '自我结构的常见隐喻：房间对应心智的不同面向；地下室/阁楼常指不被日常注意的部分。',
+  '旧屋': '记忆区与过去经验的载体——常出现在人生阶段切换、旧事被重新想起的时候。',
+  '火': '情绪强度与转化的双重意象；也可能只是日间残留（白天见过明火、烫伤新闻等）。',
+  '钱': '价值感与资源安全的投射；丢钱梦多对应「怕失去」而不是真的财帛。',
+  '坠落': '失控感的典型载体；入睡瞬间的坠落感则有更简单的生理解释（入睡抽动，hypnic jerk）。',
+  '裸体': '暴露感与面具焦虑——怕某件「藏不住的事」被看见。',
+  '厕所': '边界与隐私主题；也是躯体信号入梦的明确例子（somatic incorporation）。',
+  '婚礼': '承诺、身份合并或「两个部分的自己」开始协作。',
+  '镜子': '自我形象的审视——常出现在自我评价波动期。',
+  '雨': '情绪释放或净化的过程意象，阴雨连绵对应情绪的慢性浸渍。',
+  '猫': '独立、边界与「我想按自己的节奏来」的部分；也常是亲密关系模式的投射。',
+  '狗': '依恋、忠诚与关系安全感；梦里的狗的反应常映射你对某段关系的信任程度。',
+  '医院': '「需要修复」的信号——身体、关系或某个计划；也可能是近期就医信息的日间残留。',
+  '婴儿': '新起点与脆弱面并存——一个需要被你照料的「新东西」。',
+  '雪': '停滞、静默或情绪的降温期；覆盖一切的白也可以是「暂时按下的暂停键」。',
+  '桥': '过渡期的意象——从一种状态走到另一种状态的中间段。',
+  '楼梯': '进退与层级：上楼常对应努力与晋升感，下楼对应退回、探索深层。',
+  '开车': '掌控感与人生方向——谁在开车、车况如何，常映射「现在是谁说了算」。',
+};
+
 function renderVerdict(r) {
   const meta = GRADE_META[r.grade] || GRADE_META.none;
   const col = RING_COLOR[r.grade] || RING_COLOR.none;
@@ -139,6 +224,7 @@ function renderVerdict(r) {
 
     <div class="summary">${r.summary.map((p, i) => `<p class="${i === 1 ? 'lead' : ''}">${esc(p)}</p>`).join('')}</div>
 
+    ${insightsHtml(r)}
     ${dims ? `<div class="card-h" style="margin:16px 0 12px;border-bottom:0;padding-bottom:0">
       <h2 style="font-size:14px">预兆维度分布</h2></div><div class="dims">${dimHtml}</div>` : ''}
 
@@ -174,6 +260,7 @@ function symCard(it, detailed) {
       <h4>心理象征</h4>
       <p>${esc(e.ps)}</p>
     </div>
+    ${PSY_NOTES[e.k] ? `<p class="sym-psy"><b>注</b>${esc(PSY_NOTES[e.k])}</p>` : ''}
     ${it.scene ? `<div class="sym-sec">
       <h4>对应情境</h4>
       <div class="sym-sc"><b>${esc(it.scene.s)}</b><span>${esc(it.scene.v)}</span></div>
