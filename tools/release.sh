@@ -16,6 +16,7 @@ node tools/verify.mjs | tail -6 || { echo "校验未通过，中止。"; exit 1;
 echo ""
 echo "════ 3/7 引擎自测 ════"
 node tools/selftest.mjs | tail -3
+node tools/insights.test.mjs | tail -2
 
 echo ""
 echo "════ 4/7 全量回归 ════"

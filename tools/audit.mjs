@@ -7,7 +7,7 @@
  *   4. 触控目标：CSS 里交互元素的 min-height 是否 >= 40px
  * 用法: node tools/audit.mjs
  */
-import { readFileSync, existsSync, statSync } from 'node:fs';
+import { readFileSync, existsSync, statSync, readdirSync } from 'node:fs';
 import { join, dirname, normalize } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -156,6 +156,24 @@ if (/\/api\/ai-dream/.test(app)) {
   okNote(evoDisclosed, evoDisclosed
     ? 'AI 意象词遥测已在文案披露（匿名 / 不留原文）'
     : 'AI 意象遥测未在文案披露 —— 隐私契约缺失');
+}
+// 心理学注脚的键必须是语料主键——挂错就永远是渲染不出来的死数据
+{
+  const keys = new Set();
+  for (const f of readdirSync(WEB + '/data')) {
+    if (!f.endsWith('.json') || f === 'manifest.json') continue;
+    for (const e of JSON.parse(readFileSync(WEB + '/data/' + f, 'utf8'))) keys.add(e.k);
+  }
+  const m = app.match(/const PSY_NOTES = \{([\s\S]*?)\n\};/);
+  if (!m) { E('找不到 PSY_NOTES 定义'); }
+  else {
+    const pk = [...m[1].matchAll(/'([^']+)':/g)].map(x => x[1]);
+    const dead = pk.filter(k => !keys.has(k));
+    okNote(pk.length >= 20, `心理学注脚覆盖 ${pk.length} 个意象（应 ≥20）`);
+    okNote(dead.length === 0, dead.length === 0
+      ? '注脚键全部命中语料主键'
+      : `死键（主键不存在，注脚永远不渲染）: ${dead.join('、')}`);
+  }
 }
 
 // SEO 绝对 URL 域名一致性：自指域名必须是线上域名（曾因旧工程名残留全站指向死域名）

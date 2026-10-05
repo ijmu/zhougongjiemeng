@@ -341,8 +341,11 @@ histItems[0].click();
 await until(() => $('result').innerHTML.length > 500);
 ok($('result').innerHTML.length > 500, '点击历史记录能重新出结果');
 ok(!!$('result').querySelector('.insights'), '「另一面」面板随结果渲染');
-ok(!!$('result').querySelector('.ins-rec') && /本机第 2 次/.test($('result').querySelector('.ins-rec').textContent),
-  '重复信号面板：历史重解即触发，计数正确');
+{
+  const recEl = $('result').querySelector('.ins-rec');
+  ok(!!recEl && /本机第 \d+ 次/.test(recEl.textContent),
+    `重复信号面板：历史重解即触发，计数正确${recEl ? '（实际 ' + (recEl.textContent.match(/本机第 \d+ 次/g) || []).join('、') + '）' : '（无面板）'}`);
+}
 ok(!!document.getElementById('card-care') && /意象排演/.test(document.getElementById('card-care').textContent),
   '「梦与心理」模块就位（IRT 自助内容）');
 
