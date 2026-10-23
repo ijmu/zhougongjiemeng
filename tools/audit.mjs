@@ -197,7 +197,7 @@ if (/\/api\/ai-dream/.test(app)) {
 
 // SEO 绝对 URL 域名一致性：自指域名必须是线上域名（曾因旧工程名残留全站指向死域名）
 {
-  const CANON = 'https://zhougongjiemeng.pages.dev';
+  const CANON = 'https://useai.us.ci';
   const seo = {
     'index.html': html,
     'robots.txt': readFileSync(join(WEB, 'robots.txt'), 'utf8'),
@@ -206,7 +206,7 @@ if (/\/api\/ai-dream/.test(app)) {
   for (const [name, text] of Object.entries(seo)) {
     const hosts = [...text.matchAll(/https?:\/\/([a-z0-9.-]+)/gi)].map(m => m[1].toLowerCase());
     // 只盯我们自己的托管域族（pages.dev / workers.dev），schema 命名空间等无关域名不误报
-    const strangers = [...new Set(hosts.filter(h => /pages\.dev$|workers\.dev$/.test(h) && h !== 'zhougongjiemeng.pages.dev'))];
+    const strangers = [...new Set(hosts.filter(h => /pages\.dev$|workers\.dev$|\.us\.ci$/.test(h) && h !== 'useai.us.ci'))];
     okNote(strangers.length === 0,
       strangers.length === 0
         ? `${name} 自指域名一致（${hosts.length} 处绝对 URL）`
