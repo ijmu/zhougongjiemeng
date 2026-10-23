@@ -17,6 +17,7 @@ echo ""
 echo "════ 3/7 引擎自测 ════"
 node tools/selftest.mjs | tail -3
 node tools/insights.test.mjs | tail -2
+node tools/data-cache.test.mjs | tail -2
 
 echo ""
 echo "════ 4/7 全量回归 ════"

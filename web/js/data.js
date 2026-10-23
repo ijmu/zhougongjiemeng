@@ -38,14 +38,25 @@ function readCache() {
     const o = JSON.parse(raw);
     if (!o || o.v !== 1 || !Array.isArray(o.e) || o.e.length < 200) return null;
     if (o.n !== FILES.length) return null;
-    return o.e;
+    return { e: o.e, hash: o.hash || null };
   } catch (e) { return null; }
 }
 
-function writeCache(list) {
+function writeCache(list, hash) {
   try {
-    localStorage.setItem(KEY, JSON.stringify({ v: 1, n: FILES.length, e: list }));
+    localStorage.setItem(KEY, JSON.stringify({ v: 1, n: FILES.length, hash: hash || null, e: list }));
   } catch (e) { /* 配额满 / 隐私模式：忽略，不影响功能 */ }
+}
+
+/* 语料版本指纹：拉 manifest.json（~200B）取 hash。
+   失败返回 null——离线/弱网时退化为信任现有缓存，绝不阻断启动。 */
+async function corpusHash() {
+  try {
+    const r = await fetch('data/manifest.json?c=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return (j && typeof j.hash === 'string') ? j.hash : null;
+  } catch (e) { return null; }
 }
 
 async function fetchOne(name, tick) {
@@ -66,13 +77,20 @@ export function loadAll(onProgress) {
   if (_all) return Promise.resolve(_all);
   if (_loading) return _loading;
 
-  const cached = readCache();
-  if (cached) { _all = cached; onProgress && onProgress(FILES.length, FILES.length, 'cache'); return Promise.resolve(_all); }
-
   let done = 0;
   const tick = name => { done++; if (onProgress) onProgress(done, FILES.length, name); };
 
   _loading = (async () => {
+    // 版本指纹先行：语料一发版，本地缓存立即失效重取（修复「缓存永不更新」缺陷）。
+    // manifest 不可达（离线）时 hash=null → 信任现有缓存，不阻断启动。
+    const hash = await corpusHash();
+    const cached = readCache();
+    if (cached && (hash === null || cached.hash === hash)) {
+      _all = cached.e; _loading = null;
+      onProgress && onProgress(FILES.length, FILES.length, 'cache');
+      return _all;
+    }
+
     let parts = await Promise.all(FILES.map(n => fetchOne(n, tick)));
 
     // 网络抖动自愈：对拉空了的文件静默重试一次（不重复推进度条）
@@ -100,7 +118,7 @@ export function loadAll(onProgress) {
     // 会话内 ≥6 个文件即可用（坏一点也比全空强）；
     // 但只有 **全量** 才允许写缓存——半载绝不过夜
     if (okCount >= 6 && clean.length >= 200) _all = clean;
-    if (okCount === FILES.length && clean.length >= 200) writeCache(clean);
+    if (okCount === FILES.length && clean.length >= 200) writeCache(clean, hash);
     return clean;
   })();
 

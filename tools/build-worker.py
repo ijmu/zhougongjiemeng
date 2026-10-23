@@ -336,6 +336,16 @@ async function aiDream(req, env) {
     // 没有显式同意直接拒绝：这是隐私承诺的守门条件
     return json({ error: 'consent_required' }, 403);
   }
+  // Origin 校验（纵深防御）：只拒绝「携带了跨站 Origin」的请求——
+  // 挡掉最懒的脚本盗刷；无 Origin（curl/部分代理剥离）放行，交由限流兜底
+  {
+    const org = req.headers.get('origin');
+    if (org) {
+      let bad = true;
+      try { bad = new URL(org).host !== new URL(req.url).host; } catch (e) { bad = false; }
+      if (bad) return json({ error: 'origin_rejected' }, 403);
+    }
+  }
   const dream = clean(body.dream, 400);
   if (dream.length < 2) return json({ error: 'too_short' }, 400);
 

@@ -203,5 +203,25 @@ console.log('\n── AI 端点 · 进化遥测 ──');
   ok(bag['蛇'] === 2, `同日累计 bag=${JSON.stringify(bag)}`);
 }
 
+console.log('\n── AI 端点 · Origin 校验 ──');
+{
+  const mk = (origin) => {
+    const h = { 'Content-Type': 'application/json' };
+    if (origin) h.Origin = origin;
+    return new Request('https://zhougongjiemeng.pages.dev/api/ai-dream', {
+      method: 'POST', headers: h,
+      body: JSON.stringify({ consent: '1', dream: '梦见蛇缠身，心里发慌' }),
+    });
+  };
+  const { env } = makeEnv();
+  r = await worker.fetch(mk('https://evil.example.com'), env);
+  let o = await r.json();
+  ok(r.status === 403 && o.error === 'origin_rejected', '跨站 Origin → 403 origin_rejected');
+  r = await worker.fetch(mk('https://zhougongjiemeng.pages.dev'), env);
+  ok(r.status === 200, `同源 Origin → 放行（实际 ${r.status}）`);
+  r = await worker.fetch(mk(null), env);
+  ok(r.status === 200, `无 Origin（curl 类客户端）→ 放行（实际 ${r.status}）`);
+}
+
 console.log(`\n${fail ? '✗ 失败 ' + fail + ' 项' : '✓ 全部通过'}`);
 process.exitCode = fail ? 1 : 0;

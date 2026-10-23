@@ -3,6 +3,7 @@
  * 用法: node tools/build.mjs
  */
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync, rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
 
 const ROOT = new URL('..', import.meta.url).pathname;
@@ -41,8 +42,13 @@ for (const f of readdirSync(OUT)) {
   if (f.endsWith('.json') && !files.includes(f)) { rmSync(join(OUT, f)); console.log(`  清除陈旧 ${f}`); }
 }
 
-writeFileSync(join(OUT, 'manifest.json'), JSON.stringify({ v: 1, total, cats: stats, built: new Date().toISOString().slice(0, 10) }));
-console.log(`\n合计 ${total} 条，已写入 web/data/`);
+// 语料内容哈希：客户端缓存以此判断是否失效（语料一发版，缓存的访客立即拿到新版）
+const corpusHash = createHash('sha256');
+for (const f of files.sort()) corpusHash.update(readFileSync(join(OUT, f)));
+const CHASH = corpusHash.digest('hex').slice(0, 12);
+
+writeFileSync(join(OUT, 'manifest.json'), JSON.stringify({ v: 1, total, hash: CHASH, cats: stats, built: new Date().toISOString().slice(0, 10) }));
+console.log(`\n合计 ${total} 条（hash ${CHASH}），已写入 web/data/`);
 if (skipped.length) console.log(`跳过 ${skipped.length} 个未完成文件: ${skipped.join(', ')}`);
 
 /* 版本戳自维护：index.html 对入口资源带 ?v=，任何 js/css 内容变动自动换新戳。

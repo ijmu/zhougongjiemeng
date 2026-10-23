@@ -36,7 +36,16 @@ for (const [rel, text] of Object.entries(all)) {
     const ref = m[1];
     if (/^(https?:|\/\/|data:|minis:)/.test(ref)) continue;
     if (ref.includes('${') || ref.includes('+' + "'")) continue;   // 模板拼接跳过
-    const t = ref.startsWith('/') ? ref.slice(1) : normalize(join(dirname(rel), ref)).replace(/\\/g, '/');
+    // 选择器/注释里的 src= 形态不是资源引用（仅 JS 放宽——JS 的真实引用只走 import/fetch；HTML 保持全查）
+    const before = text.slice(Math.max(0, m.index - 24), m.index);
+    if (/src\*=|href\*=/.test(before) || (rel.endsWith('.js') && /\bsrc=/.test(before))) continue;
+    // 解析基准：JS 里 import './x' 按模块目录；fetch('data/x') 按文档 baseURI（站点根）——
+    // 浏览器语义如此，之前一律按文件目录解析会把 fetch 引用误报为悬空
+    const isJs = rel.endsWith('.js');
+    const moduleStyle = /^\.\.?\//.test(ref);
+    const t = ref.startsWith('/') ? ref.slice(1)
+      : (isJs && !moduleStyle) ? ref
+      : normalize(join(dirname(rel), ref)).replace(/\\/g, '/');
     if (t.startsWith('data/')) {
       // 语料：检查 web/data 下是否存在（build 后）
       const dir = join(WEB, 'data');
@@ -174,6 +183,16 @@ if (/\/api\/ai-dream/.test(app)) {
       ? '注脚键全部命中语料主键'
       : `死键（主键不存在，注脚永远不渲染）: ${dead.join('、')}`);
   }
+}
+
+// 语料缓存失效契约：manifest 必须带 hash，data.js 必须消费它
+{
+  const man = JSON.parse(readFileSync(WEB + '/data/manifest.json', 'utf8'));
+  okNote(typeof man.hash === 'string' && man.hash.length >= 8,
+    `manifest 带语料指纹 hash=${man.hash || '缺失'}（缓存失效的依据）`);
+  const dataJs = readFileSync(join(WEB, 'js', 'data.js'), 'utf8');
+  okNote(/corpusHash\(\)/.test(dataJs) && /cached\.hash === hash/.test(dataJs),
+    'data.js 以 manifest hash 判定缓存失效');
 }
 
 // SEO 绝对 URL 域名一致性：自指域名必须是线上域名（曾因旧工程名残留全站指向死域名）
