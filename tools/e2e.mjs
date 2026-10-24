@@ -191,6 +191,15 @@ ok(/总断/.test(result.textContent), '存在「总断」区块');
 ok(/逐象详解/.test(result.textContent), '存在「逐象详解」区块');
 ok(/传统断语/.test(result.textContent), '包含传统断语');
 ok(/心理象征/.test(result.textContent), '包含心理象征');
+// 命中页也必须有 AI 补读入口（「再读一遍」语义发生在梦书读完之后）
+{
+  const aick = $('result').querySelector('#ai-ck'), aigo = $('result').querySelector('#ai-go');
+  ok(!!aick && !!aigo && $('result').querySelector('.ai-block'), '命中页渲染出「让 AI 再读一遍」入口');
+  ok(aigo && aigo.disabled === true, '命中页 AI 按钮默认禁用（未同意不可用）');
+  if (aick) { aick.checked = true; aick.dispatchEvent(new win.Event('change', { bubbles: true })); }
+  ok(aigo && aigo.disabled === false, '命中页勾选同意后 AI 按钮解锁');
+  if (aick) { aick.checked = false; aick.dispatchEvent(new win.Event('change', { bubbles: true })); }
+}
 const syms = result.querySelectorAll('.sym');
 ok(syms.length >= 2, `逐象卡片 ${syms.length} 张`);
 const vnum = result.querySelector('.vnum b');

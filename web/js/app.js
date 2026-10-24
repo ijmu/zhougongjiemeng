@@ -273,6 +273,22 @@ function symCard(it, detailed) {
 }
 
 /* ---------- 渲染：无匹配 ---------- */
+/* AI 补读入口（未命中页与命中结果页共用；id 全页唯一——每页只渲染一个 AI 块） */
+function aiBlockHtml(hit) {
+  const tip = hit
+    ? '梦书解读如上；也可以让 AI 再从心理角度读一遍这段梦。<b>这会把你写的梦境发送到服务器</b>（本页其余部分全程只在本机计算）。AI 说法与梦书不一致时，以你自己的感受为准。'
+    : '梦书没收录这种说法，可以交给 AI 就这段梦境给一段解读。<b>这会把你写的梦境发送到服务器</b>（本页其余部分全程只在本机计算）。';
+  return `<div class="sug-block ai-block">
+      <h4>让 AI 再读一遍</h4>
+      <p class="sug-tip">${tip}</p>
+      <div class="ai-consent" id="ai-consent">
+        <label class="ai-ck"><input type="checkbox" id="ai-ck"><span>我明白梦境将发送到服务器</span></label>
+        <button class="ai-go" id="ai-go" disabled>请 AI 解读</button>
+      </div>
+      <div id="ai-out"></div>
+    </div>`;
+}
+
 function renderEmpty(r) {
   const text = (r && r.text) || $('dream').value || '';
   const sug = suggestEntries(text, ENTRIES, 6);
@@ -309,16 +325,7 @@ function renderEmpty(r) {
       <div class="sug-list small">${extra.map(k =>
         `<button class="sug-i" data-fill="${esc(k)}"><b>${esc(k)}</b></button>`).join('')}</div>
     </div>
-    <div class="sug-block ai-block">
-      <h4>让 AI 再读一遍</h4>
-      <p class="sug-tip">梦书没收录这种说法，可以交给 AI 就这段梦境给一段解读。
-        <b>这会把你写的梦境发送到服务器</b>（本页其余部分全程只在本机计算）。</p>
-      <div class="ai-consent" id="ai-consent">
-        <label class="ai-ck"><input type="checkbox" id="ai-ck"><span>我明白梦境将发送到服务器</span></label>
-        <button class="ai-go" id="ai-go" disabled>请 AI 解读</button>
-      </div>
-      <div id="ai-out"></div>
-    </div>
+    ${aiBlockHtml(false)}
     <p class="tip" style="margin-top:14px">当前梦书收录 ${ENTRIES.length} 个符号、${INDEX.length} 条可匹配词。
       也可以点下方「翻梦书」按类别浏览全部梦象。</p>
   </section>`;
@@ -475,6 +482,9 @@ async function solve(text) {
     </details>` : ''}
   </section>`;
 
+  // 命中页也给 AI 补读入口——「再读一遍」的语义本就发生在梦书读完之后
+  html += `<section class="card">${aiBlockHtml(true)}</section>`;
+
   $('result').innerHTML = html;
   pushHist(text, r.score, r.grade);
   renderHist();
@@ -482,6 +492,7 @@ async function solve(text) {
 
   $('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
   bindResult();
+  bindAI(text, r.items.slice(0, 5).map(it => it.entry.k));
 }
 
 function bindResult() {
